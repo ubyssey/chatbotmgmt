@@ -4,7 +4,7 @@
 	"description": "An application for driving interactive news delivery via Facebook Messenger",
 	"main": "bootstrap.js",
 	"scripts": {
-	"start": "NODE_ENV=development&& node bootstrap.js",
+	"start": "NODE_ENV=development node bootstrap.js",
 	"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
