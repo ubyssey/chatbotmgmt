@@ -15,18 +15,18 @@ with the Procfile. This can always change later but it is easy to see right now.
 
 ###Building your app and running it locally
 1. Install your dependencies
-'''
+```
 npm install
-'''
+```
 
 2. Start your app locally. You should be able to see the processes with your shell. The app should be listening on **localhost:3000**.
 
-'''
+```
 heroku local web
-'''
+```
 
 ###Deploying to Heroku
-'''
+```
 git add -A 				// or whatever file you're adding
 git commit -m "commit message"
 
@@ -37,14 +37,14 @@ heroku create
 git push heroku master
 
 heroku open			
-'''
+```
 
 **Make sure you're pushing the right commit. You can check this under Personal Apps in Heroku**
 
 ## Some deployment debugging
-'''
+```
 heroku logs				// shows a log of your app
-''' 
+``` 
 
 - check if dependencies are installed correctly or if the start scripts are set up correctly.
 - set up npm-debug.log
