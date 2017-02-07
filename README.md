@@ -28,7 +28,7 @@ heroku local web
 
 ###Deploying to Heroku
 ```
-git add -A 				// or whatever file you're adding
+git add -A 				
 git commit -m "commit message"
 
 heroku login				// if you're not logged in already
