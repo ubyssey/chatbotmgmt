@@ -11,17 +11,7 @@
  *				Valid values are "development" and "production".
  */
 
-
-const express = require("express");
-const oApp = express();
-
-// load middleware
-const bodyParser = require("body-parser");
-oApp.use(bodyParser.json());
-
-// load routes
-const oRoutes = require("./config/routes");
-oRoutes.configureRoutes(oApp);
+const oApp = require("./app");
 
 // load environment
 const oEnvironment = require("./config/environments")[process.env.NODE_ENV];
