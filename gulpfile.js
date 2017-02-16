@@ -18,9 +18,4 @@ gulp.task("transpile", function() {
         .pipe(gulp.dest("target"));
 });
 
-gulp.task("clean", function() {
-    return gulp.src("./target/**/*", { read: false })
-        .pipe(clean());
-});
-
 gulp.task("default", ["lint", "transpile"]);
