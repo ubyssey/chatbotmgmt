@@ -13,6 +13,6 @@ const oEnvironments = {
 		port: 3000,
 		address: "127.0.0.1"
 	}
-}
+};
 
 module.exports = oEnvironments;
