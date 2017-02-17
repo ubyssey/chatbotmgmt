@@ -11,7 +11,7 @@ const sConversationApiEnvironmentsFile = path.resolve(__dirname, "conversation-a
 const oConversationApi = require(sConversationApiAppFile);
 const oConversationApiConfig = require(sConversationApiEnvironmentsFile)[process.env.NODE_ENV];
 
-if (oConversationApiConfig === undefined || oConversationApiConfig.port === undefined || oConversationApiConfig.address === undefined) {
+if (!oConversationApiConfig || !oConversationApiConfig.port || !oConversationApiConfig.address) {
     throw "[FATAL] Required conversation API configuration not found! Check config/environments.js and NODE_ENV environment variable.";
 }
 
@@ -20,7 +20,7 @@ const sManagementApiEnvironmentsFile = path.resolve(__dirname, "management-api",
 const oManagementApi = require(sManagementApiAppFile);
 const oManagementApiConfig = require(sManagementApiEnvironmentsFile)[process.env.NODE_ENV];
 
-if (oManagementApiConfig === undefined || oManagementApiConfig.port === undefined || oManagementApiConfig.address === undefined) {
+if (!oManagementApiConfig || !oManagementApiConfig.port || !oManagementApiConfig.address) {
     throw "[FATAL] Required management API configuration not found! Check config/environments.js and NODE_ENV environment variable.";
 }
 
