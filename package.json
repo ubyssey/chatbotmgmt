@@ -1,27 +1,32 @@
 {
-	"name": "chatbot",
-	"version": "0.0.1",
-	"description": "An application for driving interactive news delivery via Facebook Messenger",
-	"main": "bootstrap.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"repository": "git+https://github.com/ubyssey/chatbot.git",
-	"author": "The Ubyssey",
-	"license": "UNLICENSED",
-	"bugs": {
-		"url": "https://github.com/ubyssey/chatbot/issues"
-	},
-	"homepage": "https://github.com/ubyssey/chatbot#readme",
-	"dependencies": {
-		"body-parser": "~1.16",
-		"express": "~4.14"
-	},
-	"devDependencies": {
-		"gulp": "^3.9.1",
-		"gulp-babel": "^6.1.2",
-		"gulp-clean": "^0.3.2",
-		"gulp-jshint": "^2.0.4",
-		"jshint": "^2.9.4"
-	}
+  "name": "chatbot",
+  "version": "0.0.1",
+  "description": "An application for driving interactive news delivery via Facebook Messenger",
+  "main": "bootstrap.js",
+  "scripts": {
+    "start": "cross-env NODE_ENV=development node src/main/bootstrap.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "git+https://github.com/ubyssey/chatbot.git",
+  "author": "The Ubyssey",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/ubyssey/chatbot/issues"
+  },
+  "homepage": "https://github.com/ubyssey/chatbot#readme",
+  "dependencies": {
+    "body-parser": "~1.16",
+    "cross-env": "^3.1.4",
+    "express": "~4.14"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-clean": "^0.3.2",
+    "gulp-jshint": "^2.0.4",
+    "jshint": "^2.9.4"
+  }, 
+  "engines": {
+    "node": "6.9.4"
+  }
 }
