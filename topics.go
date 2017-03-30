@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/gocraft/web"
 
@@ -16,24 +16,39 @@ func (ctx *RequestContext) ListTopics(rw web.ResponseWriter, req *web.Request) {
 }
 
 // POST /topics
-func (ctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Request) {
+func (reqctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.Background()
+
 	decoder := json.NewDecoder(req.Body)
 	var t models.Topic
 	if err := decoder.Decode(&t); err != nil {
 		fmt.Fprint(rw, "JSON NO GOOD!!!")
 		return
 	}
-	b, err := json.Marshal(t)
-	if err != nil {
-		fmt.Println("ENCODE JSON NOT GOOD:", err)
+	if err := t.Save(ctx); err != nil {
+		fmt.Fprint(rw, "Failed to save!!")
+		return
 	}
-	os.Stdout.Write(b)
-	fmt.Fprint(rw, "GOT SOME YUMMY JSON!!")
+	top_url := fmt.Sprintf("/topics/%s", *t.UUID)
+	rw.Header().Set("Location", top_url)
 }
 
 // GET /topics/:uuid
-func (ctx *ResourceRequestContext) GetTopic(rw web.ResponseWriter, req *web.Request) {
-	fmt.Fprintf(rw, "GET /topics/%s", ctx.rid)
+func (reqctx *ResourceRequestContext) GetTopic(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.WithValue(context.Background(), 0, reqctx.rid)
+	t := models.Topic{}
+	err := t.GetById(ctx)
+	if err != nil {
+		fmt.Fprintf(rw, "got an error getting the topic!")
+		fmt.Println(err)
+		return
+	}
+	j, err := json.Marshal(t)
+	if err != nil {
+		fmt.Println("ENCODE JSON NOT GOOD:", err)
+		return
+	}
+	fmt.Fprint(rw, string(j))
 }
 
 // PATCH /topics/:uuid

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gocraft/web"
 	"github.com/satori/go.uuid"
+	"github.com/ubyssey/chatbot/models"
 	"log"
 	"net/http"
 )
@@ -56,6 +57,12 @@ func (ctx *RequestContext) SendHelloWorld(rw web.ResponseWriter, req *web.Reques
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC) // use UTC for logging
+
+	err := models.CreateConnection()
+	if err != nil {
+		log.Print("[FATAL] Could not connect to mongo!")
+		log.Fatal(err)
+	}
 
 	router := web.New(RequestContext{}).
 		Middleware((*RequestContext).AuthenticateRequest).

@@ -2,14 +2,19 @@ package models
 
 import (
 	"context"
+	"github.com/satori/go.uuid"
+	"log"
 	"time"
+)
 
-	mgo "gopkg.in/mgo.v2"
+const (
+	topicCollection = "topics"
 )
 
 // represents a fully unmarshalled topic, complete with proper expiration time
 type Topic struct {
-	Model
+	UUID        *string    `bson:"_id" json:"uuid"`
+	VersionUUID *string    `json:"version_uuid"`
 	Transient   *bool      `json:"transient"`
 	Title       *string    `json:"title"`
 	Description *string    `json:"description"`
@@ -33,5 +38,23 @@ func (t *Topic) Validate() error {
 }
 
 func (t *Topic) GetById(ctx context.Context) error {
+	if tid, ok := ctx.Value(0).(string); ok {
+		log.Printf("using topic id %s\n", string(tid))
+	}
+	return db.C(topicCollection).FindId(ctx.Value(0)).One(t)
+}
 
+func (t *Topic) Save(ctx context.Context) error {
+	if t.UUID == nil {
+		t.UUID = new(string)
+		*t.UUID = uuid.NewV4().String()
+	}
+	if t.VersionUUID == nil {
+		t.VersionUUID = new(string)
+	}
+	*t.VersionUUID = uuid.NewV4().String()
+	if err := t.Validate(); err != nil {
+		return err
+	}
+	return db.C(topicCollection).Insert(t)
 }
