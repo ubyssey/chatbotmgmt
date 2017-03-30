@@ -2,9 +2,11 @@ package models
 
 import (
 	"context"
+	"errors"
 	"github.com/satori/go.uuid"
-	"log"
 	"time"
+
+	mgo "gopkg.in/mgo.v2"
 )
 
 const (
@@ -13,6 +15,7 @@ const (
 
 // represents a fully unmarshalled topic, complete with proper expiration time
 type Topic struct {
+	persisted   bool
 	UUID        *string    `bson:"_id" json:"uuid"`
 	VersionUUID *string    `json:"version_uuid"`
 	Transient   *bool      `json:"transient"`
@@ -25,26 +28,46 @@ type Topic struct {
 // Validate the format of the fields of the passed topic.
 func (t *Topic) ValidateFormat() error {
 	if t.Title == nil || *t.Title == "" {
-		return nil // TODO return a non-nil value
+		return errors.New("validate topic format: title is required")
+	}
+	if t.Transient == nil {
+		return errors.New("validate topic format: transient is required")
+	}
+	if *t.Transient == false && t.ExpiresAt != nil {
+		return errors.New("validate topic format: topics with an expiratin date must be transient")
 	}
 	return nil
 }
 
-func (t *Topic) Validate() error {
+func (t *Topic) Validate(ctx context.Context) error {
 	if err := t.ValidateFormat(); err != nil {
 		return err
 	}
-	return nil // TODO: if the topic has a parent, make sure the parent exists!
+	if t.Parent != nil {
+		pt := new(Topic)
+		if err := pt.GetById(ctx, *t.Parent); err != nil {
+			if err == mgo.ErrNotFound {
+				return errors.New("validate topic parent: the parent topic could not be found")
+			}
+			return err
+		}
+	}
+	return nil
 }
 
-func (t *Topic) GetById(ctx context.Context) error {
-	if tid, ok := ctx.Value(0).(string); ok {
-		log.Printf("using topic id %s\n", string(tid))
-	}
-	return db.C(topicCollection).FindId(ctx.Value(0)).One(t)
+func (t *Topic) GetById(ctx context.Context, tid string) error {
+	t.persisted = true
+	return db.C(topicCollection).FindId(tid).One(t)
 }
 
 func (t *Topic) Save(ctx context.Context) error {
+	if t.UUID != nil && t.VersionUUID != nil {
+		st := new(Topic)
+		st.GetById(ctx, *t.UUID)
+		if *t.VersionUUID != *st.VersionUUID {
+			return errors.New("Version UUID mismatch!")
+		}
+	}
 	if t.UUID == nil {
 		t.UUID = new(string)
 		*t.UUID = uuid.NewV4().String()
@@ -53,7 +76,7 @@ func (t *Topic) Save(ctx context.Context) error {
 		t.VersionUUID = new(string)
 	}
 	*t.VersionUUID = uuid.NewV4().String()
-	if err := t.Validate(); err != nil {
+	if err := t.Validate(ctx); err != nil {
 		return err
 	}
 	return db.C(topicCollection).Insert(t)

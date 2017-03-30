@@ -22,22 +22,25 @@ func (reqctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Reques
 	decoder := json.NewDecoder(req.Body)
 	var t models.Topic
 	if err := decoder.Decode(&t); err != nil {
-		fmt.Fprint(rw, "JSON NO GOOD!!!")
+		rw.WriteHeader(400)
+		fmt.Fprint(rw, "the request body could not be parsed as json or contained an improperly formatted field")
 		return
 	}
 	if err := t.Save(ctx); err != nil {
-		fmt.Fprint(rw, "Failed to save!!")
+		rw.WriteHeader(400) // TODO handle errors that aren't the client's fault
+		fmt.Fprint(rw, err)
 		return
 	}
 	top_url := fmt.Sprintf("/topics/%s", *t.UUID)
 	rw.Header().Set("Location", top_url)
+	rw.WriteHeader(201)
 }
 
 // GET /topics/:uuid
 func (reqctx *ResourceRequestContext) GetTopic(rw web.ResponseWriter, req *web.Request) {
-	ctx := context.WithValue(context.Background(), 0, reqctx.rid)
+	ctx := context.Background()
 	t := models.Topic{}
-	err := t.GetById(ctx)
+	err := t.GetById(ctx, reqctx.rid)
 	if err != nil {
 		fmt.Fprintf(rw, "got an error getting the topic!")
 		fmt.Println(err)
