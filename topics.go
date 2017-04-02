@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/gocraft/web"
 
 	"github.com/ubyssey/chatbot/models"
+	mgo "gopkg.in/mgo.v2"
 )
 
 // GET /topics
@@ -27,8 +29,13 @@ func (reqctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Reques
 		return
 	}
 	if err := t.Save(ctx); err != nil {
-		rw.WriteHeader(400) // TODO handle errors that aren't the client's fault
-		fmt.Fprint(rw, err)
+		switch err.(type) {
+		case *models.ValidationError:
+			rw.WriteHeader(400)
+			fmt.Fprint(rw, err)
+		default:
+			rw.WriteHeader(500)
+		}
 		return
 	}
 	top_url := fmt.Sprintf("/topics/%s", *t.UUID)
@@ -39,16 +46,21 @@ func (reqctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Reques
 // GET /topics/:uuid
 func (reqctx *ResourceRequestContext) GetTopic(rw web.ResponseWriter, req *web.Request) {
 	ctx := context.Background()
-	t := models.Topic{}
+	var t models.Topic
 	err := t.GetById(ctx, reqctx.rid)
 	if err != nil {
-		fmt.Fprintf(rw, "got an error getting the topic!")
-		fmt.Println(err)
+		if err == mgo.ErrNotFound {
+			rw.WriteHeader(404)
+		} else {
+			rw.WriteHeader(500)
+			log.Print(err)
+		}
 		return
 	}
 	j, err := json.Marshal(t)
 	if err != nil {
-		fmt.Println("ENCODE JSON NOT GOOD:", err)
+		log.Print("get topic: failed to encode as json: ", err)
+		rw.WriteHeader(500)
 		return
 	}
 	fmt.Fprint(rw, string(j))
@@ -60,6 +72,17 @@ func (ctx *ResourceRequestContext) UpdateTopic(rw web.ResponseWriter, req *web.R
 }
 
 // DELETE /topics/:uuid
-func (ctx *ResourceRequestContext) DeleteTopic(rw web.ResponseWriter, req *web.Request) {
-	fmt.Fprintf(rw, "DELETE /topics/%s", ctx.rid)
+func (reqctx *ResourceRequestContext) DeleteTopic(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.Background()
+	err := (&models.Topic{}).DeleteById(ctx, reqctx.rid)
+	if err != nil {
+		switch err {
+		case mgo.ErrNotFound:
+			rw.WriteHeader(404)
+		default:
+			rw.WriteHeader(500)
+		}
+		return
+	}
+	rw.WriteHeader(204)
 }

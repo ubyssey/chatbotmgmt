@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/satori/go.uuid"
+	"log"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
@@ -15,9 +16,7 @@ const (
 
 // represents a fully unmarshalled topic, complete with proper expiration time
 type Topic struct {
-	persisted   bool
-	UUID        *string    `bson:"_id" json:"uuid"`
-	VersionUUID *string    `json:"version_uuid"`
+	Model       `bson:",inline"`
 	Transient   *bool      `json:"transient"`
 	Title       *string    `json:"title"`
 	Description *string    `json:"description"`
@@ -28,7 +27,7 @@ type Topic struct {
 // Validate the format of the fields of the passed topic.
 func (t *Topic) ValidateFormat() error {
 	if t.Title == nil || *t.Title == "" {
-		return errors.New("validate topic format: title is required")
+		return &ValidationError{"validate topic format: title is required"}
 	}
 	if t.Transient == nil {
 		return errors.New("validate topic format: transient is required")
@@ -55,9 +54,27 @@ func (t *Topic) Validate(ctx context.Context) error {
 	return nil
 }
 
+// validate that the topic can be deleted (that no other resources depend on it)
+func (t *Topic) ValidateDelete(ctx context.Context) error {
+	return nil // TODO perform actual validation
+}
+
 func (t *Topic) GetById(ctx context.Context, tid string) error {
-	t.persisted = true
 	return db.C(topicCollection).FindId(tid).One(t)
+}
+
+// Delete a Topic by ID
+func (t *Topic) DeleteById(ctx context.Context, tid string) error {
+	if err := t.ValidateDelete(ctx); err != nil {
+		return err
+	}
+	if err := db.C(topicCollection).RemoveId(tid); err != nil {
+		if err != mgo.ErrNotFound {
+			log.Print("delete topic: db error: ", err)
+		}
+		return err
+	}
+	return nil
 }
 
 func (t *Topic) Save(ctx context.Context) error {
