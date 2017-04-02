@@ -13,8 +13,22 @@ import (
 )
 
 // GET /topics
-func (ctx *RequestContext) ListTopics(rw web.ResponseWriter, req *web.Request) {
-	fmt.Fprint(rw, "GET /topics")
+func (reqctx *RequestContext) ListTopics(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.Background()
+	var topics []models.Topic
+	if err := models.GetAllTopics(ctx, &topics); err != nil {
+		rw.WriteHeader(500)
+		return
+	}
+	j, err := json.Marshal(map[string]([]models.Topic){
+		"results": topics,
+	})
+	if err != nil {
+		log.Print("list topics: failed to encode as json: ", err)
+		rw.WriteHeader(500)
+		return
+	}
+	fmt.Fprint(rw, string(j))
 }
 
 // POST /topics

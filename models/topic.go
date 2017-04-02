@@ -73,6 +73,10 @@ func (t *Topic) ValidateDelete(ctx context.Context) error {
 	return nil
 }
 
+func GetAllTopics(ctx context.Context, t *[]Topic) error {
+	return db.C(topicCollection).Find(nil).All(t)
+}
+
 func (t *Topic) GetById(ctx context.Context, tid string) error {
 	return db.C(topicCollection).FindId(tid).One(t)
 }
