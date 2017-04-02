@@ -3,11 +3,13 @@ package models
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/satori/go.uuid"
 	"log"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -56,7 +58,19 @@ func (t *Topic) Validate(ctx context.Context) error {
 
 // validate that the topic can be deleted (that no other resources depend on it)
 func (t *Topic) ValidateDelete(ctx context.Context) error {
-	return nil // TODO perform actual validation
+	var results []Topic
+	err := db.C(topicCollection).Find(bson.M{"parent": *t.UUID}).Select(bson.M{"_id": 1}).All(&results)
+	if err != nil {
+		return err
+	}
+	if len(results) > 0 {
+		var err DependentResourceError
+		for _, v := range results {
+			err.resources = append(err.resources, fmt.Sprintf("topic:%s", *v.UUID))
+		}
+		return &err
+	}
+	return nil
 }
 
 func (t *Topic) GetById(ctx context.Context, tid string) error {
@@ -65,6 +79,7 @@ func (t *Topic) GetById(ctx context.Context, tid string) error {
 
 // Delete a Topic by ID
 func (t *Topic) DeleteById(ctx context.Context, tid string) error {
+	t.UUID = &tid // necessary for ValidateDelete()
 	if err := t.ValidateDelete(ctx); err != nil {
 		return err
 	}

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"bytes"
+
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -17,8 +19,23 @@ type ValidationError struct {
 	msg string
 }
 
-func (v *ValidationError) Error() string {
-	return v.msg
+func (e *ValidationError) Error() string {
+	return e.msg
+}
+
+type DependentResourceError struct {
+	resources []string
+}
+
+func (e *DependentResourceError) Error() string {
+	var msgb bytes.Buffer
+	for i, v := range e.resources {
+		msgb.WriteString(v)
+		if i < (len(e.resources) - 1) {
+			msgb.WriteString(" ")
+		}
+	}
+	return msgb.String()
 }
 
 func CreateConnection() error {

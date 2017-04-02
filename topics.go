@@ -76,9 +76,14 @@ func (reqctx *ResourceRequestContext) DeleteTopic(rw web.ResponseWriter, req *we
 	ctx := context.Background()
 	err := (&models.Topic{}).DeleteById(ctx, reqctx.rid)
 	if err != nil {
-		switch err {
-		case mgo.ErrNotFound:
+		if err == mgo.ErrNotFound {
 			rw.WriteHeader(404)
+			return
+		}
+		switch err.(type) {
+		case *models.DependentResourceError:
+			rw.WriteHeader(412)
+			fmt.Fprint(rw, err) // TODO this error message should be formatted according to spec
 		default:
 			rw.WriteHeader(500)
 		}
