@@ -23,8 +23,9 @@ func (e *ValidationError) Error() string {
 	return e.msg
 }
 
+// used when a resource is depended on by one or more other resources
 type DependentResourceError struct {
-	resources []string
+	resources []string // describes resources that depend on the resource in question in the format "<resource type>:<resource uuid>"
 }
 
 func (e *DependentResourceError) Error() string {
