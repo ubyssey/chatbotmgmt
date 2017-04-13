@@ -56,19 +56,6 @@ func (t *Topic) ValidateReferences(ctx context.Context) error {
 	return nil
 }
 
-// the struct on which this is invoked must have a non-nil uuid and versionuuid
-// arg naming: oo = old object, no = new object
-// the order of the arguments is irrelevant; both orderings behave identically
-func ValidateVersionUUID(ctx context.Context, oo Model, no Model) error {
-	if oo.VersionUUID == nil || no.VersionUUID == nil {
-		log.Panic("validate version uuid: one or more objects do(es) not have a version uuid!")
-	}
-	if *oo.VersionUUID != *no.VersionUUID {
-		return &VersionUUIDMismatchError{"validate version uuid: version uuid values do not match"}
-	}
-	return nil
-}
-
 // validate that the topic can be deleted (that no other resources depend on it)
 func (t *Topic) ValidateDelete(ctx context.Context) error {
 	if t.UUID == nil {

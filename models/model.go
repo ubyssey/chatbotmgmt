@@ -48,6 +48,19 @@ func (e *VersionUUIDMismatchError) Error() string {
 	return e.msg
 }
 
+// the models on which this is invoked must have a non-nil uuid and versionuuid
+// arg naming: oo = old object, no = new object
+// the order of the arguments is irrelevant; both orderings behave identically
+func ValidateVersionUUID(ctx context.Context, oo Model, no Model) error {
+	if oo.VersionUUID == nil || no.VersionUUID == nil {
+		log.Panic("validate version uuid: one or more objects do(es) not have a version uuid!")
+	}
+	if *oo.VersionUUID != *no.VersionUUID {
+		return &VersionUUIDMismatchError{"validate version uuid: version uuid values do not match"}
+	}
+	return nil
+}
+
 func CreateConnection() error {
 	conn, err := mgo.Dial("mongodb://localhost:27017")
 	if err != nil {
