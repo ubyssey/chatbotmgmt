@@ -14,4 +14,4 @@ The Chatbot will be running on your local machine bound to port 3000.
 
 ## Things Not To Do (Yet)
 
-* Run it. The project does not have any functional security features, so putting a running instance of it on the web 
+* Run it on the Internet. The project does not have any functional security features, so putting a running instance of it on the web would be poor form
