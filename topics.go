@@ -15,7 +15,7 @@ import (
 // GET /topics
 func (reqctx *RequestContext) ListTopics(rw web.ResponseWriter, req *web.Request) {
 	ctx := context.Background()
-	var topics []models.Topic
+	topics := make([]models.Topic, 0)
 	if err := models.GetAllTopics(ctx, &topics); err != nil {
 		rw.WriteHeader(500)
 		return
