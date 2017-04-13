@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"log"
@@ -26,29 +25,30 @@ type Topic struct {
 	ExpiresAt   *time.Time `json:"expires_at"` // this Just Works(TM) because `time` implements the json.Unmarshaler interface :-)
 }
 
-// Validate the format of the fields of the passed topic.
-func (t *Topic) ValidateFormat() error {
+// validate topic. does not care about version uuids
+func (t *Topic) Validate(ctx context.Context) error {
 	if t.Title == nil || *t.Title == "" {
 		return &ValidationError{"validate topic format: title is required"}
 	}
 	if t.Transient == nil {
-		return errors.New("validate topic format: transient is required")
+		return &ValidationError{"validate topic format: transient is required"}
 	}
 	if *t.Transient == false && t.ExpiresAt != nil {
-		return errors.New("validate topic format: topics with an expiratin date must be transient")
+		return &ValidationError{"validate topic format: topics with an expiration date must be transient"}
+	}
+	if err := t.ValidateReferences(ctx); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (t *Topic) Validate(ctx context.Context) error {
-	if err := t.ValidateFormat(); err != nil {
-		return err
-	}
+// validate references are valid
+func (t *Topic) ValidateReferences(ctx context.Context) error {
 	if t.Parent != nil {
 		pt := new(Topic)
 		if err := pt.GetById(ctx, *t.Parent); err != nil {
 			if err == mgo.ErrNotFound {
-				return errors.New("validate topic parent: the parent topic could not be found")
+				return &ValidationError{"validate topic: the parent topic could not be found"}
 			}
 			return err
 		}
@@ -56,8 +56,35 @@ func (t *Topic) Validate(ctx context.Context) error {
 	return nil
 }
 
+// the struct on which this is invoked must have a non-nil uuid and versionuuid
+// arg naming: oo = old object, no = new object
+// the order of the arguments is irrelevant; both orderings behave identically
+func ValidateVersionUUID(ctx context.Context, oo Model, no Model) error {
+	if oo.VersionUUID == nil || no.VersionUUID == nil {
+		log.Panic("validate version uuid: one or more objects do(es) not have a version uuid!")
+	}
+	if *oo.VersionUUID != *no.VersionUUID {
+		return &VersionUUIDMismatchError{"validate version uuid: version uuid values do not match"}
+	}
+	return nil
+}
+
 // validate that the topic can be deleted (that no other resources depend on it)
 func (t *Topic) ValidateDelete(ctx context.Context) error {
+	if t.UUID == nil {
+		return &ValidationError{"validate delete topic: no uuid provided"}
+	}
+	if t.VersionUUID == nil {
+		return &ValidationError{"validate delete topic: no version uuid provided"}
+	}
+	ot := new(Topic)
+	if err := db.C(topicCollection).FindId(*t.UUID).One(ot); err != nil {
+		return err
+	}
+	if err := ValidateVersionUUID(ctx, t.Model, ot.Model); err != nil {
+		return err
+	}
+
 	var results []Topic
 	err := db.C(topicCollection).Find(bson.M{"parent": *t.UUID}).Select(bson.M{"_id": 1}).All(&results)
 	if err != nil {
@@ -82,12 +109,11 @@ func (t *Topic) GetById(ctx context.Context, tid string) error {
 }
 
 // Delete a Topic by ID
-func (t *Topic) DeleteById(ctx context.Context, tid string) error {
-	t.UUID = &tid // necessary for ValidateDelete()
+func (t *Topic) Delete(ctx context.Context) error {
 	if err := t.ValidateDelete(ctx); err != nil {
 		return err
 	}
-	if err := db.C(topicCollection).RemoveId(tid); err != nil {
+	if err := db.C(topicCollection).RemoveId(*t.UUID); err != nil {
 		if err != mgo.ErrNotFound {
 			log.Print("delete topic: db error: ", err)
 		}
@@ -97,14 +123,35 @@ func (t *Topic) DeleteById(ctx context.Context, tid string) error {
 }
 
 func (t *Topic) Save(ctx context.Context) error {
-	if t.UUID != nil && t.VersionUUID != nil {
-		st := new(Topic)
-		st.GetById(ctx, *t.UUID)
-		if *t.VersionUUID != *st.VersionUUID {
-			return errors.New("Version UUID mismatch!")
+	newrec := t.UUID == nil // it's a new record if its uuid is nil
+	// TODO fix this logic up, be sure that version ID is always validated
+	if !newrec {
+		ot := new(Topic)
+		if err := db.C(topicCollection).FindId(*t.UUID).One(ot); err != nil {
+			return err
 		}
-	}
-	if t.UUID == nil {
+		if err := ValidateVersionUUID(ctx, ot.Model, t.Model); err != nil {
+			return err
+		}
+		// fuse existant and fresh fields
+		// this is gross and should probably use reflection so it's not tightly coupled, but that's a job for later
+		if t.Transient != nil {
+			ot.Transient = t.Transient
+		}
+		if t.Title != nil {
+			ot.Title = t.Title
+		}
+		if t.Description != nil {
+			ot.Description = t.Description
+		}
+		if t.Parent != nil {
+			ot.Parent = t.Parent
+		}
+		if t.ExpiresAt != nil {
+			ot.ExpiresAt = t.ExpiresAt
+		}
+		t = ot // override the topic we're working on with our fresh one
+	} else {
 		t.UUID = new(string)
 		*t.UUID = uuid.NewV4().String()
 	}
@@ -115,5 +162,9 @@ func (t *Topic) Save(ctx context.Context) error {
 	if err := t.Validate(ctx); err != nil {
 		return err
 	}
-	return db.C(topicCollection).Insert(t)
+	if newrec {
+		return db.C(topicCollection).Insert(t)
+	} else {
+		return db.C(topicCollection).Update(bson.M{"_id": *t.UUID}, t) // use record ID as primary key
+	}
 }

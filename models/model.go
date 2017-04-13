@@ -15,6 +15,7 @@ type Model struct {
 	VersionUUID *string `json:"version_uuid"`
 }
 
+// generic validation error
 type ValidationError struct {
 	msg string
 }
@@ -37,6 +38,14 @@ func (e *DependentResourceError) Error() string {
 		}
 	}
 	return msgb.String()
+}
+
+type VersionUUIDMismatchError struct {
+	msg string
+}
+
+func (e *VersionUUIDMismatchError) Error() string {
+	return e.msg
 }
 
 func CreateConnection() error {
