@@ -111,7 +111,6 @@ func (t *Topic) Delete(ctx context.Context) error {
 
 func (t *Topic) Save(ctx context.Context) error {
 	newrec := t.UUID == nil // it's a new record if its uuid is nil
-	// TODO fix this logic up, be sure that version ID is always validated
 	if !newrec {
 		ot := new(Topic)
 		if err := db.C(topicCollection).FindId(*t.UUID).One(ot); err != nil {
@@ -147,6 +146,9 @@ func (t *Topic) Save(ctx context.Context) error {
 	}
 	*t.VersionUUID = uuid.NewV4().String()
 	if err := t.Validate(ctx); err != nil {
+		return err
+	}
+	if err := t.ValidateReferences(ctx); err != nil {
 		return err
 	}
 	if newrec {

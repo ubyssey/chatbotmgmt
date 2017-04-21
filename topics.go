@@ -20,7 +20,7 @@ func (reqctx *RequestContext) ListTopics(rw web.ResponseWriter, req *web.Request
 		rw.WriteHeader(500)
 		return
 	}
-	j, err := json.Marshal(map[string]([]models.Topic){
+	j, err := json.Marshal(map[string](interface{}){
 		"results": topics,
 	})
 	if err != nil {

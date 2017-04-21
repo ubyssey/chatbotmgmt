@@ -2,6 +2,8 @@ package models
 
 import (
 	"bytes"
+	"context"
+	"log"
 
 	mgo "gopkg.in/mgo.v2"
 )
