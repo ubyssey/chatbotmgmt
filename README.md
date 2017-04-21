@@ -1,6 +1,6 @@
 # Chatbot: For Chatting!
 
-Made with ❤️ by The Ubyssey
+Made with ❤️ (and ☕️) by The Ubyssey
 
 ## Running It
 
