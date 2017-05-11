@@ -84,6 +84,8 @@ func (t *Topic) ValidateDelete(ctx context.Context) error {
 		}
 		return &err
 	}
+	// TODO check for campaigns referencing the topic
+	// TODO check for sub mgmt nodes referencing the topic
 	return nil
 }
 

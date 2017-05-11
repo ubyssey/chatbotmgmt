@@ -22,20 +22,6 @@ type Campaign struct {
 	Name      *string          `json:"name"`
 }
 
-type Node struct {
-	Model   `bson:",inline"`
-	Effect  *string                 `json:"effect"`
-	Content *map[string]interface{} `json:"content"`
-	Actions *[]UserAction           `json:"user_actions"`
-}
-
-type UserAction struct {
-	Model  `bson:",inline"`
-	Type   *string `json:"type"`
-	Label  *string `json:"label"`
-	Target *string `json:"target"`
-}
-
 func (c *Campaign) Validate(ctx context.Context) error {
 	if c.Nodes == nil {
 		return &ValidationError{"validate campaign: \"nodes\" is required"}
@@ -55,7 +41,11 @@ func (c *Campaign) Validate(ctx context.Context) error {
 	if _, ok := (*c.Nodes)[*c.RootNode]; !ok {
 		return &ValidationError{"validate campaign: the root node must refer to an existant node"}
 	}
-	// TODO validate each node - eventually
+	for _, node := range *c.Nodes {
+		if err := node.Validate(ctx, c); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
