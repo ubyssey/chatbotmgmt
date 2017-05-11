@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/gocraft/web"
 	"github.com/satori/go.uuid"
-	"github.com/ubyssey/chatbot/models"
+	"github.com/ubyssey/chatbotmgmt/models"
 	"log"
 	"net/http"
 )

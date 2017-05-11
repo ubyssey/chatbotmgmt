@@ -8,7 +8,7 @@ import (
 
 	"github.com/gocraft/web"
 
-	"github.com/ubyssey/chatbot/models"
+	"github.com/ubyssey/chatbotmgmt/models"
 	mgo "gopkg.in/mgo.v2"
 )
 

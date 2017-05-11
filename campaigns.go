@@ -7,7 +7,7 @@ import (
 	"github.com/gocraft/web"
 	"log"
 
-	"github.com/ubyssey/chatbot/models"
+	"github.com/ubyssey/chatbotmgmt/models"
 
 	mgo "gopkg.in/mgo.v2"
 )
