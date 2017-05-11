@@ -13,8 +13,27 @@ import (
 )
 
 // GET /campaigns
-func (ctx *RequestContext) ListCampaigns(rw web.ResponseWriter, req *web.Request) {
-	fmt.Fprint(rw, "GET /campaigns")
+func (reqctx *RequestContext) ListCampaigns(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.Background()
+	campaigns := make([]models.Campaign, 0)
+	if err := models.GetAllCampaigns(ctx, &campaigns); err != nil {
+		rw.WriteHeader(500)
+		return
+	}
+	// nil out values we don't care about
+	for i, _ := range campaigns {
+		campaigns[i].Nodes = nil
+		campaigns[i].RootNode = nil
+	}
+	j, err := json.Marshal(map[string](interface{}){
+		"results": campaigns,
+	})
+	if err != nil {
+		log.Print("list campaigns: failed to encode as json: ", err)
+		rw.WriteHeader(500)
+		return
+	}
+	fmt.Fprint(rw, string(j))
 }
 
 // POST /campaigns

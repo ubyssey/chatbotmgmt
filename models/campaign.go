@@ -17,9 +17,13 @@ type Campaign struct {
 	ArticleId *string          `json:"article_id"`
 	PublishAt *time.Time       `json:"publish_at"`
 	Topics    *[]string        `json:"topics"`
-	RootNode  *string          `json:"root_node"`
-	Nodes     *map[string]Node `json:"nodes"`
+	RootNode  *string          `json:"root_node,omitempty"`
+	Nodes     *map[string]Node `json:"nodes,omitempty"`
 	Name      *string          `json:"name"`
+}
+
+func GetAllCampaigns(ctx context.Context, c *[]Campaign) error {
+	return db.C(campaignCollection).Find(nil).All(c)
 }
 
 func (c *Campaign) Validate(ctx context.Context) error {
