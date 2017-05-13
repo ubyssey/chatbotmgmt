@@ -14,7 +14,7 @@ The Chatbot Management API will be running on your local machine bound to port 3
 
 ## Caveats
 
-This service _does not_ do any actual chatting; rather, it maintains and exposes backing models (topics and campaigns), which may then be consumed by frontends. Currently, the only frontend is (chatbotfb)[https://github.com/ubyssey/chatbotfb]
+This service _does not_ do any actual chatting; rather, it maintains and exposes backing models (topics and campaigns), which may then be consumed by frontends. Currently, the only frontend is [chatbotfb](https://github.com/ubyssey/chatbotfb)
 
 ## Things Not To Do (Yet)
 
