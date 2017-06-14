@@ -41,12 +41,14 @@ func (reqctx *RequestContext) CreateTopic(rw web.ResponseWriter, req *web.Reques
 		fmt.Fprint(rw, "the request body could not be parsed as json or contained an improperly formatted field")
 		return
 	}
+	t.UUID = nil // ignore a uuid if they gave us one
 	if err := t.Save(ctx); err != nil {
 		switch err.(type) {
 		case *models.ValidationError:
 			rw.WriteHeader(400)
 			fmt.Fprint(rw, err)
 		default:
+			log.Print("create topic: internal error: ", err)
 			rw.WriteHeader(500)
 		}
 		return

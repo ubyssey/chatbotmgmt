@@ -6,6 +6,8 @@ import (
 	"log"
 
 	mgo "gopkg.in/mgo.v2"
+
+	"github.com/satori/go.uuid"
 )
 
 var (
@@ -48,6 +50,26 @@ type VersionUUIDMismatchError struct {
 
 func (e *VersionUUIDMismatchError) Error() string {
 	return e.msg
+}
+
+// validate uuid format and ensure string representations are lowercased
+// only validates present fields
+func (m *Model) ValidateUUIDFormat(ctx context.Context) error {
+	if m.UUID != nil {
+		uid, err := uuid.FromString(*m.UUID)
+		if err != nil {
+			return err
+		}
+		*m.UUID = uid.String()
+	}
+	if m.VersionUUID != nil {
+		vuid, err := uuid.FromString(*m.VersionUUID)
+		if err != nil {
+			return err
+		}
+		*m.VersionUUID = vuid.String()
+	}
+	return nil
 }
 
 // the models on which this is invoked must have a non-nil uuid and versionuuid

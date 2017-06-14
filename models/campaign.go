@@ -53,8 +53,60 @@ func (c *Campaign) Validate(ctx context.Context) error {
 	return nil
 }
 
+// validate the format of, and normalize the format of, all uuids in the campaign
+func (c *Campaign) NormalizeUUIDFormat(ctx context.Context) error {
+	if c.Topics != nil {
+		for i, tid := range *c.Topics {
+			ntid, err := uuid.FromString(tid)
+			if err != nil {
+				return err
+			}
+			(*c.Topics)[i] = ntid.String()
+		}
+	}
+	newNodes := make(map[string]Node)
+	for k, v := range *c.Nodes {
+		nid, err := uuid.FromString(k)
+		if err != nil {
+			return err
+		}
+		switch *v.Effect {
+		case "message":
+			if v.Actions != nil {
+				for _, v := range *v.Actions {
+					if *v.Type == "node" || *v.Type == "campaign" {
+						tid, err := uuid.FromString(*v.Target)
+						if err != nil {
+							return err
+						}
+						*v.Target = tid.String()
+					}
+				}
+			}
+		case "subscribe_topic":
+		case "unsubscribe_topic":
+			tid, err := uuid.FromString(*v.TopicUuid)
+			if err != nil {
+				return err
+			}
+			*v.TopicUuid = tid.String()
+		}
+		newNodes[nid.String()] = v
+	}
+	c.Nodes = &newNodes
+	if c.RootNode != nil {
+		rnid, err := uuid.FromString(*c.RootNode)
+		if err != nil {
+			return err
+		}
+		*c.RootNode = rnid.String()
+	}
+	return nil
+}
+
 // validate that resources referenced (read: topics) exist and make sense
 func (c *Campaign) ValidateReferences(ctx context.Context) error {
+	// TODO validate that this campaign doesn't refer to itself?
 	if c.Topics == nil || len(*c.Topics) < 1 {
 		return &ValidationError{"validate campaign: \"nodes\" is required"}
 	}
@@ -86,6 +138,7 @@ func (c *Campaign) Save(ctx context.Context) error {
 		c.VersionUUID = new(string)
 	}
 	*c.VersionUUID = uuid.NewV4().String()
+	c.NormalizeUUIDFormat(ctx)
 	if err := c.Validate(ctx); err != nil {
 		return err
 	}

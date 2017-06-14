@@ -9,17 +9,15 @@ import (
 )
 
 type Node struct {
-	Model        `bson:",inline"`
 	Effect       *string                 `json:"effect"`
-	Content      *map[string]interface{} `json:"content"`
-	Actions      *[]UserAction           `json:"user_actions"`
-	TopicUuid    *string                 `json:"topic"`
-	Confirmation *string                 `json:"confirmation"`
-	NextNode     *string                 `json:"next"`
+	Content      *map[string]interface{} `json:"content,omitempty"`
+	Actions      *[]UserAction           `json:"user_actions,omitempty"`
+	TopicUuid    *string                 `json:"topic,omitempty"`
+	Confirmation *string                 `json:"confirmation,omitempty"`
+	NextNode     *string                 `json:"next,omitempty"`
 }
 
 type UserAction struct {
-	Model  `bson:",inline"`
 	Type   *string `json:"type"`
 	Label  *string `json:"label"`
 	Target *string `json:"target"`

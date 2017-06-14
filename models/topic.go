@@ -27,6 +27,9 @@ type Topic struct {
 
 // validate topic. does not care about version uuids
 func (t *Topic) Validate(ctx context.Context) error {
+	if err := t.Model.ValidateUUIDFormat(ctx); err != nil {
+		return err
+	}
 	if t.Title == nil || *t.Title == "" {
 		return &ValidationError{"validate topic format: title is required"}
 	}
@@ -38,6 +41,17 @@ func (t *Topic) Validate(ctx context.Context) error {
 	}
 	if err := t.ValidateReferences(ctx); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (t *Topic) NormalizeUUIDFormat(ctx context.Context) error {
+	if t.Parent != nil {
+		pid, err := uuid.FromString(*t.Parent)
+		if err != nil {
+			return err
+		}
+		*t.Parent = pid.String()
 	}
 	return nil
 }
@@ -147,6 +161,7 @@ func (t *Topic) Save(ctx context.Context) error {
 		t.VersionUUID = new(string)
 	}
 	*t.VersionUUID = uuid.NewV4().String()
+	t.NormalizeUUIDFormat(ctx)
 	if err := t.Validate(ctx); err != nil {
 		return err
 	}
