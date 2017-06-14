@@ -105,11 +105,9 @@ func (c *Campaign) NormalizeUUIDFormat(ctx context.Context) error {
 }
 
 // validate that resources referenced (read: topics) exist and make sense
+// also validate that the external resources (read: not part of this campaign) referenced by nodes and actions make sense
 func (c *Campaign) ValidateReferences(ctx context.Context) error {
 	// TODO validate that this campaign doesn't refer to itself?
-	if c.Topics == nil || len(*c.Topics) < 1 {
-		return &ValidationError{"validate campaign: \"nodes\" is required"}
-	}
 	for _, t := range *c.Topics {
 		n, err := db.C(topicCollection).FindId(t).Count()
 		if err != nil {
@@ -119,6 +117,12 @@ func (c *Campaign) ValidateReferences(ctx context.Context) error {
 			return &ValidationError{fmt.Sprintf("no topic with the uuid %s exists", t)}
 		}
 	}
+	for _, node := range *c.Nodes {
+		if err := node.ValidateReferences(ctx, c); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

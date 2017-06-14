@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 
 	mgo "gopkg.in/mgo.v2"
@@ -50,6 +51,24 @@ func (n *Node) Validate(ctx context.Context, c *Campaign) error {
 		if n.TopicUuid == nil {
 			return &ValidationError{"validate campaign node: a topic subscription node must have a topic UUID"}
 		}
+	default:
+		return &ValidationError{"validate campaign node: a node's effect must be one of: (\"message\", \"subscribe_topic\", \"unsubscribe_topic\")"}
+	}
+	return nil
+}
+
+func (n *Node) ValidateReferences(ctx context.Context, c *Campaign) error {
+	switch *n.Effect {
+	case "message":
+		if n.Actions != nil && len(*n.Actions) > 0 {
+			for _, a := range *n.Actions {
+				if err := a.ValidateReferences(ctx, c); err != nil {
+					return err
+				}
+			}
+		}
+	case "subscribe_topic":
+	case "unsubscribe_topic":
 		tt := new(Topic)
 		if err := tt.GetById(ctx, *n.TopicUuid); err != nil {
 			if err == mgo.ErrNotFound {
@@ -58,7 +77,7 @@ func (n *Node) Validate(ctx context.Context, c *Campaign) error {
 			return err
 		}
 	default:
-		return &ValidationError{"validate campaign node: a node's effect must be one of: (\"message\", \"subscribe_topic\", \"unsubscribe_topic\")"}
+		log.Panic("ValidateReferences was invoked on an invalid campaign node (this node's effect field doesn't make sense)!")
 	}
 	return nil
 }
@@ -80,13 +99,7 @@ func (a *UserAction) Validate(ctx context.Context, c *Campaign) error {
 			return &ValidationError{fmt.Sprintf("validate campaign node action: no node with the uuid %s exists in this campaign", *a.Target)}
 		}
 	case "campaign":
-		cpg := new(Campaign)
-		if err := cpg.GetById(ctx, *a.Target); err != nil {
-			if err == mgo.ErrNotFound {
-				return &ValidationError{fmt.Sprintf("validate campaign node action: no campaign with the uuid %s exists", *a.Target)}
-			}
-			return err
-		}
+		break // no interal references, so nothing for us to do!
 	case "link":
 		if _, err := url.Parse(*a.Target); err != nil {
 			return &ValidationError{fmt.Sprintf("validate campaign node action: the url \"%s\" appears to be malformed", *a.Target)}
@@ -95,4 +108,24 @@ func (a *UserAction) Validate(ctx context.Context, c *Campaign) error {
 		return &ValidationError{"validate campaign node action: a user action's type must be one of: (\"node\", \"campaign\", \"link\")"}
 	}
 	return nil
+}
+
+func (a *UserAction) ValidateReferences(ctx context.Context, c *Campaign) error {
+	switch *a.Type {
+	case "node":
+	case "link":
+		break // no external references, so nothing for us to do!
+	case "campaign":
+		cpg := new(Campaign)
+		if err := cpg.GetById(ctx, *a.Target); err != nil {
+			if err == mgo.ErrNotFound {
+				return &ValidationError{fmt.Sprintf("validate campaign node action: no campaign with the uuid %s exists", *a.Target)}
+			}
+			return err
+		}
+	default:
+		log.Panic("ValidateReferences was invoked on an invalid campaign node user action (this action's type field doesn't make sense)!")
+	}
+	return nil
+
 }
