@@ -42,6 +42,7 @@ func (n *Node) Validate(ctx context.Context, c *Campaign) error {
 			}
 		}
 	case "subscribe_topic":
+		fallthrough
 	case "unsubscribe_topic":
 		if n.NextNode != nil {
 			if _, ok := (*c.Nodes)[*n.NextNode]; !ok {

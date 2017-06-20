@@ -6,6 +6,8 @@ import (
 	"github.com/satori/go.uuid"
 	"log"
 	"time"
+
+	mgo "gopkg.in/mgo.v2"
 )
 
 const (
@@ -24,6 +26,43 @@ type Campaign struct {
 
 func GetAllCampaigns(ctx context.Context, c *[]Campaign) error {
 	return db.C(campaignCollection).Find(nil).All(c)
+}
+
+func (c *Campaign) ValidateDelete(ctx context.Context) error {
+	if c.UUID == nil {
+		return &ValidationError{"validate delete campaign: no uuid provided"}
+	}
+	if c.VersionUUID == nil {
+		return &ValidationError{"validate delete campaign: no version uuid provided"}
+	}
+	oc := new(Campaign)
+	if err := db.C(campaignCollection).FindId(*c.UUID).One(oc); err != nil {
+		return err
+	}
+	if err := ValidateVersionUUID(ctx, c.Model, oc.Model); err != nil {
+		return err
+	}
+
+	campaigns := make([]Campaign, 0)
+	GetAllCampaigns(ctx, &campaigns)
+	var err DependentResourceError
+	for _, cc := range campaigns {
+		for nid, cn := range *cc.Nodes {
+			if cn.Actions == nil {
+				continue
+			}
+			for _, ca := range *cn.Actions {
+				if *ca.Target == *c.UUID {
+					err.resources = append(err.resources, fmt.Sprintf("campaign/node:%s/%s", *cc.UUID, nid))
+				}
+			}
+		}
+	}
+	if len(err.resources) > 0 {
+		return &err
+	}
+
+	return nil
 }
 
 func (c *Campaign) Validate(ctx context.Context) error {
@@ -64,36 +103,38 @@ func (c *Campaign) NormalizeUUIDFormat(ctx context.Context) error {
 			(*c.Topics)[i] = ntid.String()
 		}
 	}
-	newNodes := make(map[string]Node)
-	for k, v := range *c.Nodes {
-		nid, err := uuid.FromString(k)
-		if err != nil {
-			return err
-		}
-		switch *v.Effect {
-		case "message":
-			if v.Actions != nil {
-				for _, v := range *v.Actions {
-					if *v.Type == "node" || *v.Type == "campaign" {
-						tid, err := uuid.FromString(*v.Target)
-						if err != nil {
-							return err
-						}
-						*v.Target = tid.String()
-					}
-				}
-			}
-		case "subscribe_topic":
-		case "unsubscribe_topic":
-			tid, err := uuid.FromString(*v.TopicUuid)
+	if c.Nodes != nil {
+		newNodes := make(map[string]Node)
+		for k, v := range *c.Nodes {
+			nid, err := uuid.FromString(k)
 			if err != nil {
 				return err
 			}
-			*v.TopicUuid = tid.String()
+			switch *v.Effect {
+			case "message":
+				if v.Actions != nil {
+					for _, v := range *v.Actions {
+						if *v.Type == "node" || *v.Type == "campaign" {
+							tid, err := uuid.FromString(*v.Target)
+							if err != nil {
+								return err
+							}
+							*v.Target = tid.String()
+						}
+					}
+				}
+			case "subscribe_topic":
+			case "unsubscribe_topic":
+				tid, err := uuid.FromString(*v.TopicUuid)
+				if err != nil {
+					return err
+				}
+				*v.TopicUuid = tid.String()
+			}
+			newNodes[nid.String()] = v
 		}
-		newNodes[nid.String()] = v
+		c.Nodes = &newNodes
 	}
-	c.Nodes = &newNodes
 	if c.RootNode != nil {
 		rnid, err := uuid.FromString(*c.RootNode)
 		if err != nil {
@@ -153,6 +194,20 @@ func (c *Campaign) Save(ctx context.Context) error {
 		return db.C(campaignCollection).Insert(c)
 	} else {
 		log.Panic("not implemented")
+	}
+	return nil
+}
+
+func (c *Campaign) Delete(ctx context.Context) error {
+	c.NormalizeUUIDFormat(ctx)
+	if err := c.ValidateDelete(ctx); err != nil {
+		return err
+	}
+	if err := db.C(campaignCollection).RemoveId(*c.UUID); err != nil {
+		if err != mgo.ErrNotFound {
+			log.Print("delete campaign: db error: ", err)
+		}
+		return err
 	}
 	return nil
 }

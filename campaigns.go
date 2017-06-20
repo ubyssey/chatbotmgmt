@@ -92,6 +92,46 @@ func (ctx *ResourceRequestContext) UpdateCampaign(rw web.ResponseWriter, req *we
 }
 
 // DELETE /campaigns/:uuid
-func (ctx *ResourceRequestContext) DeleteCampaign(rw web.ResponseWriter, req *web.Request) {
-	fmt.Fprintf(rw, "DELETE /campaigns/%s", ctx.rid)
+func (reqctx *ResourceRequestContext) DeleteCampaign(rw web.ResponseWriter, req *web.Request) {
+	ctx := context.Background()
+
+	decoder := json.NewDecoder(req.Body)
+	var c models.Campaign
+	if err := decoder.Decode(&c); err != nil {
+		rw.WriteHeader(400)
+		fmt.Fprint(rw, "the request body could not be parsed as json or contained an improperly formatted field")
+		log.Print("delete campaign: failed to parse body: ", err)
+		return
+	}
+
+	if c.UUID == nil {
+		c.UUID = &reqctx.rid
+	} else {
+		if *c.UUID != reqctx.rid {
+			rw.WriteHeader(400)
+			fmt.Fprint(rw, "the uuid values in the body and url must match")
+			return
+		}
+	}
+
+	err := c.Delete(ctx)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			rw.WriteHeader(404)
+			return
+		}
+		switch err.(type) {
+		case *models.ValidationError:
+			rw.WriteHeader(400)
+			fmt.Fprint(rw, err)
+		case *models.DependentResourceError:
+			rw.WriteHeader(412)
+			fmt.Fprint(rw, err) // TODO this error message should be formatted according to spec
+		default:
+			rw.WriteHeader(500)
+			log.Print("delete campaign: ", err)
+		}
+		return
+	}
+	rw.WriteHeader(204)
 }
