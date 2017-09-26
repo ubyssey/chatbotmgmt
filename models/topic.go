@@ -86,20 +86,61 @@ func (t *Topic) ValidateDelete(ctx context.Context) error {
 		return err
 	}
 
-	var results []Topic
-	err := db.C(topicCollection).Find(bson.M{"parent": *t.UUID}).Select(bson.M{"_id": 1}).All(&results)
+	// check for topics that are children of this topic
+	var tresults []Topic
+	err := db.C(topicCollection).Find(bson.M{"parent": *t.UUID}).Select(bson.M{"_id": 1}).All(&tresults)
 	if err != nil {
 		return err
 	}
-	if len(results) > 0 {
+	if len(tresults) > 0 {
 		var err DependentResourceError
-		for _, v := range results {
+		for _, v := range tresults {
 			err.resources = append(err.resources, fmt.Sprintf("topic:%s", *v.UUID))
 		}
 		return &err
 	}
-	// TODO check for campaigns referencing the topic
-	// TODO check for sub mgmt nodes referencing the topic
+
+	// check for campaigns referencing this topic
+	var cresults []Campaign
+	err = db.C(campaignCollection).Find(bson.M{"topic": *t.UUID}).Select(bson.M{"_id": 1}).All(&cresults)
+	if err != nil {
+		return err
+	}
+	if len(cresults) > 0 {
+		var err DependentResourceError
+		for _, v := range tresults {
+			err.resources = append(err.resources, fmt.Sprintf("campaign:%s", *v.UUID))
+		}
+		return &err
+	}
+
+	// check for campaign nodes referencing this topic
+	// this is VERY inefficient because of the nature of the structure of this data
+	// we have to read every campaign into memory and examine each node
+	var campaigns []Campaign
+	err = db.C(campaignCollection).Find(bson.M{}).Select(bson.M{"_id": 1, "nodes": 1}).All(&campaigns)
+	if err != nil {
+		return err
+	}
+	var drerr DependentResourceError // instantiate so we have a list of resources to append to
+	for _, c := range campaigns {
+		for nid, n := range *c.Nodes {
+			switch *n.Effect {
+			case "subscribe_topic":
+				fallthrough
+			case "unsubscribe_topic":
+				if *n.TopicUuid == *t.UUID {
+					drerr.resources = append(drerr.resources, fmt.Sprintf("campaign:%s > node:%s", *c.UUID, nid))
+				}
+			default:
+				continue
+			}
+		}
+	}
+	if len(drerr.resources) > 0 {
+		return &drerr
+	}
+
 	return nil
 }
 
